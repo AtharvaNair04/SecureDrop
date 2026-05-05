@@ -1,5 +1,9 @@
-import { Controller, Post, Body } from '@nestjs/common';
+import { Controller, Post, Body, Res, UseGuards, Get, Req } from '@nestjs/common';
 import { AuthService } from './auth.service';
+import { JwtAuthGuard } from './jwt.guard';
+import type { Response } from 'express';
+import { PermissionsGuard } from './permissions.guard';
+import { Permissions } from './permissions.decorator';
 
 @Controller('auth')
 export class AuthController {
@@ -11,7 +15,34 @@ export class AuthController {
   }
 
   @Post('login')
-  login(@Body() body: { email: string; password: string }) {
-    return this.authService.login(body.email, body.password);
+  async login(
+    @Body() body: { email: string; password: string },
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const { access_token } = await this.authService.login(
+      body.email,
+      body.password,
+    );
+
+    res.cookie('jwt', access_token, {
+      httpOnly: true,
+      secure: true,
+      sameSite: 'lax',
+    });
+
+    return { message: 'Login successful' };
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Get('me')
+  me(@Req() req: any) {
+    return req.user;
+  }
+
+  @UseGuards(JwtAuthGuard, PermissionsGuard)
+  @Get('delete-test')
+  @Permissions('DELETE_FILE')
+  deleteTest() {
+    return { message: 'You can delete files' };
   }
 }
