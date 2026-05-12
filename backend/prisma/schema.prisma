@@ -7,33 +7,105 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+enum SubmissionStatus {
+  PENDING
+  UNDER_REVIEW
+  RESOLVED
+  REJECTED
+}
+
 model User {
-  id        String @id @default(uuid())
-  email     String @unique
-  password  String
-  roles     UserRole[]
-  createdAt DateTime @default(now())
+  id          String @id @default(uuid())
+  email       String @unique
+  password    String
+
+  roles       UserRole[]
+  submissions Submission[] @relation("SubmissionAuthor")
+  auditLogs   AccessAuditLog[]
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @default(now()) @updatedAt
 }
 
 model Role {
-  id           String @id @default(uuid())
-  name         String @unique
-  permissions  Permission[]
-  users        UserRole[]
+  id          String @id @default(uuid())
+  name        String @unique
+
+  permissions Permission[]
+  users       UserRole[]
 }
 
 model Permission {
-  id     String @id @default(uuid())
-  name   String @unique
-  roles  Role[]
+  id    String @id @default(uuid())
+  name  String @unique
+
+  roles Role[]
 }
 
 model UserRole {
   userId String
   roleId String
 
-  user User @relation(fields: [userId], references: [id])
-  role Role @relation(fields: [roleId], references: [id])
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role Role @relation(fields: [roleId], references: [id], onDelete: Cascade)
 
   @@id([userId, roleId])
+}
+
+model Submission {
+  id          String @id @default(uuid())
+
+  title       String?
+  description String
+
+  isAnonymous Boolean @default(false)
+
+  authorId    String?
+  author      User? @relation("SubmissionAuthor", fields: [authorId], references: [id], onDelete: SetNull)
+
+  status      SubmissionStatus @default(PENDING)
+
+  attachments Attachment[]
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @default(now()) @updatedAt
+
+  @@index([status])
+  @@index([authorId])
+  @@index([createdAt])
+}
+
+model Attachment {
+  id           String @id @default(uuid())
+
+  originalName String
+  storedName   String
+  mimeType     String
+  fileSize     Int
+  storagePath  String
+  sha256Hash   String
+
+  submissionId String
+  submission   Submission @relation(fields: [submissionId], references: [id], onDelete: Cascade)
+
+  createdAt    DateTime @default(now())
+
+  @@index([submissionId])
+  @@index([sha256Hash])
+}
+
+model AccessAuditLog {
+  id           String @id @default(uuid())
+
+  userId       String?
+  user         User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  action       String
+  resourceType String
+  resourceId   String
+
+  createdAt    DateTime @default(now())
+
+  @@index([userId])
+  @@index([resourceType, resourceId])
 }
