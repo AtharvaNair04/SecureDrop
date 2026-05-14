@@ -5,6 +5,7 @@ import { AuthModule } from './auth/auth.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { ConfigModule } from '@nestjs/config';
 import { SubmissionsModule } from './submissions/submissions.module';
+import { AttachmentsModule } from './attachments/attachments.module';
 
 @Module({
   imports: [
@@ -13,7 +14,8 @@ import { SubmissionsModule } from './submissions/submissions.module';
     }),
     AuthModule,
     PrismaModule,
-    SubmissionsModule
+    SubmissionsModule,
+    AttachmentsModule
   ],
   controllers: [AppController],
   providers: [AppService],
