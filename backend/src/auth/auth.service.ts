@@ -1,4 +1,8 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import {
+  Injectable,
+  UnauthorizedException,
+  InternalServerErrorException,
+} from '@nestjs/common';
 import * as argon2 from 'argon2';
 import { PrismaService } from '../prisma/prisma.service';
 import { JwtService } from '@nestjs/jwt';
@@ -13,46 +17,73 @@ export class AuthService {
   async register(email: string, password: string) {
     const hash = await argon2.hash(password);
 
-    const user = await this.prisma.user.create({
-      data: {
-        email,
-        password: hash,
-      },
-    });
+    return this.prisma.$transaction(async (tx) => {
+      const userRole = await tx.role.findUnique({
+        where: { name: 'USER' },
+      });
 
-    return {
-      id: user.id,
-      email: user.email,
-    };
+      if (!userRole) {
+        throw new InternalServerErrorException(
+          'Default USER role not configured',
+        );
+      }
+
+      const user = await tx.user.create({
+        data: {
+          email,
+          password: hash,
+        },
+      });
+
+      await tx.userRole.create({
+        data: {
+          userId: user.id,
+          roleId: userRole.id,
+        },
+      });
+
+      return {
+        id: user.id,
+        email: user.email,
+      };
+    });
   }
 
   async login(email: string, password: string) {
     const user = await this.prisma.user.findUnique({
       where: { email },
-        include: {
-          roles: {
-            include: {
-              role: {
-                include: {
-                  permissions: true,
-                },
+      include: {
+        roles: {
+          include: {
+            role: {
+              include: {
+                permissions: true,
               },
             },
           },
         },
-      });
+      },
+    });
 
-    if (!user) throw new UnauthorizedException('Invalid credentials');
+    if (!user) {
+      throw new UnauthorizedException('Invalid credentials');
+    }
 
     const valid = await argon2.verify(user.password, password);
 
-    if (!valid) throw new UnauthorizedException('Invalid credentials');
+    if (!valid) {
+      throw new UnauthorizedException('Invalid credentials');
+    }
 
     const roles = user.roles.map((ur) => ur.role.name);
 
-    const permissions = user.roles.flatMap((ur) =>
-      ur.role.permissions.map((p) => p.name),
-    );
+    const permissions = [
+      ...new Set(
+        user.roles.flatMap((ur) =>
+          ur.role.permissions.map((p) => p.name),
+        ),
+      ),
+    ];
 
     const payload = {
       sub: user.id,
