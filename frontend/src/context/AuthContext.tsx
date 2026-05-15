@@ -38,9 +38,16 @@ export function AuthProvider({
   const refresh = async () => {
     try {
       const data = await authApi.me();
-
-      setUser(data);
-    } catch {
+      
+      // Transform backend response to frontend format
+      setUser({
+        id: data.userId,
+        email: data.email,
+        role: data.roles?.[0] || 'USER',
+        createdAt: new Date().toISOString(),
+      });
+    } catch (error) {
+      console.error('Auth refresh failed:', error);
       setUser(null);
     } finally {
       setLoading(false);
@@ -55,18 +62,26 @@ export function AuthProvider({
     email: string,
     password: string
   ) => {
-    const data = await authApi.login({
+    setLoading(true);
+    await authApi.login({
       email,
       password,
     });
 
-    setUser(data);
+    // Refresh to get user data with role
+    await refresh();
   };
 
   const logout = async () => {
-    await authApi.logout();
-
-    setUser(null);
+    setLoading(true);
+    try {
+      await authApi.logout();
+    } catch (error) {
+      console.error('Logout failed:', error);
+    } finally {
+      setUser(null);
+      setLoading(false);
+    }
   };
 
   return (

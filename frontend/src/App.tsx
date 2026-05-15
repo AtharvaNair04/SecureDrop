@@ -7,8 +7,7 @@ import RegisterPage from './pages/RegisterPage';
 import DashboardPage from './pages/DashboardPage';
 import SubmitPage   from './pages/SubmitPage';
 import { MyDropsPage, DropDetailPage } from './pages/DropsPage';
-import ReviewPage   from './pages/ReviewPage';
-import AdminUsersPage from './pages/AdminPage';
+import { AllDropsPage } from './pages/AllDropsPage';
 
 export default function App() {
   return (
@@ -24,18 +23,9 @@ export default function App() {
           <Route element={<AppLayout />}>
             <Route path="/dashboard" element={<DashboardPage />} />
             <Route path="/submit"    element={<SubmitPage />} />
+            <Route path="/drops"     element={<AllDropsPage />} />
             <Route path="/my-drops"  element={<MyDropsPage />} />
             <Route path="/my-drops/:id" element={<DropDetailPage />} />
-          </Route>
-
-          {/* MODERATOR+ */}
-          <Route element={<AppLayout requiredRole="MODERATOR" />}>
-            <Route path="/review" element={<ReviewPage />} />
-          </Route>
-
-          {/* ADMIN only */}
-          <Route element={<AppLayout requiredRole="ADMIN" />}>
-            <Route path="/admin/users" element={<AdminUsersPage />} />
           </Route>
         </Routes>
       </BrowserRouter>
