@@ -3,8 +3,11 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import { SubmissionStatus } from '@prisma/client';
+
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateSubmissionDto } from './dto/create-submission.dto';
+import { UpdateSubmissionStatusDto } from './dto/update-submission-status.dto';
 
 @Injectable()
 export class SubmissionsService {
@@ -24,7 +27,7 @@ export class SubmissionsService {
         title: dto.title,
         description: dto.description,
         isAnonymous,
-        authorId: userId, // retain ownership internally
+        authorId: userId,
       },
       include: {
         attachments: {
@@ -43,7 +46,7 @@ export class SubmissionsService {
       data: {
         userId,
         action: 'CREATE_SUBMISSION',
-        resourceType: 'Submission',
+        resourceType: 'SUBMISSION',
         resourceId: submission.id,
       },
     });
@@ -76,7 +79,7 @@ export class SubmissionsService {
       data: {
         userId,
         action: 'LIST_OWN_SUBMISSIONS',
-        resourceType: 'Submission',
+        resourceType: 'SUBMISSION',
         resourceId: 'MULTIPLE',
       },
     });
@@ -108,7 +111,7 @@ export class SubmissionsService {
         data: {
           userId,
           action: 'DENIED_SUBMISSION_ACCESS',
-          resourceType: 'Submission',
+          resourceType: 'SUBMISSION',
           resourceId: id,
         },
       });
@@ -120,11 +123,104 @@ export class SubmissionsService {
       data: {
         userId,
         action: 'VIEW_SUBMISSION',
-        resourceType: 'Submission',
+        resourceType: 'SUBMISSION',
         resourceId: id,
       },
     });
 
     return submission;
+  }
+
+  async findAll(userId: string) {
+    const submissions = await this.prisma.submission.findMany({
+      orderBy: {
+        createdAt: 'desc',
+      },
+      include: {
+        author: {
+          select: {
+            id: true,
+            email: true,
+          },
+        },
+        attachments: {
+          select: {
+            id: true,
+            originalName: true,
+            mimeType: true,
+            fileSize: true,
+            createdAt: true,
+          },
+        },
+      },
+    });
+
+    await this.prisma.accessAuditLog.create({
+      data: {
+        userId,
+        action: 'VIEW_ALL_SUBMISSIONS',
+        resourceType: 'SUBMISSION',
+        resourceId: 'ALL',
+      },
+    });
+
+    return submissions.map((submission) => ({
+      ...submission,
+      author: submission.isAnonymous ? null : submission.author,
+    }));
+  }
+
+  async updateStatus(
+    id: string,
+    userId: string,
+    dto: UpdateSubmissionStatusDto,
+  ) {
+    const submission = await this.prisma.submission.findUnique({
+      where: { id },
+    });
+
+    if (!submission) {
+      throw new NotFoundException('Submission not found');
+    }
+
+    const updatedSubmission = await this.prisma.submission.update({
+      where: { id },
+      data: {
+        status: dto.status as SubmissionStatus,
+      },
+      include: {
+        author: {
+          select: {
+            id: true,
+            email: true,
+          },
+        },
+        attachments: {
+          select: {
+            id: true,
+            originalName: true,
+            mimeType: true,
+            fileSize: true,
+            createdAt: true,
+          },
+        },
+      },
+    });
+
+    await this.prisma.accessAuditLog.create({
+      data: {
+        userId,
+        action: 'UPDATE_SUBMISSION_STATUS',
+        resourceType: 'SUBMISSION',
+        resourceId: id,
+      },
+    });
+
+    return {
+      ...updatedSubmission,
+      author: updatedSubmission.isAnonymous
+        ? null
+        : updatedSubmission.author,
+    };
   }
 }

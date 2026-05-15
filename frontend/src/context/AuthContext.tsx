@@ -1,4 +1,3 @@
-
 import React, {
   createContext,
   useContext,
@@ -6,15 +5,19 @@ import React, {
   useState,
 } from 'react';
 
-import { authApi, User } from '../api';
+import {
+  authApi,
+  User,
+} from '../api';
 
 interface AuthContextType {
   user: User | null;
+
   loading: boolean;
 
   login: (
     email: string,
-    password: string
+    password: string,
   ) => Promise<void>;
 
   logout: () => Promise<void>;
@@ -22,7 +25,10 @@ interface AuthContextType {
   refresh: () => Promise<void>;
 }
 
-const AuthContext = createContext<AuthContextType | null>(null);
+const AuthContext =
+  createContext<AuthContextType | null>(
+    null,
+  );
 
 export function AuthProvider({
   children,
@@ -30,59 +36,90 @@ export function AuthProvider({
   children: React.ReactNode;
 }) {
   const [user, setUser] =
-    useState<User | null>(null);
+    useState<User | null>(
+      null,
+    );
 
   const [loading, setLoading] =
     useState(true);
 
-  const refresh = async () => {
-    try {
-      const data = await authApi.me();
-      
-      // Transform backend response to frontend format
-      setUser({
-        id: data.userId,
-        email: data.email,
-        role: data.roles?.[0] || 'USER',
-        createdAt: new Date().toISOString(),
-      });
-    } catch (error) {
-      console.error('Auth refresh failed:', error);
-      setUser(null);
-    } finally {
-      setLoading(false);
-    }
-  };
+  const refresh =
+    async () => {
+      try {
+        const data =
+          await authApi.me();
+
+        setUser({
+          id: data.userId,
+
+          email: data.email,
+
+          role:
+            data.roles?.includes(
+              'ADMIN',
+            )
+              ? 'ADMIN'
+              : 'USER',
+
+          roles: data.roles,
+
+          permissions:
+            data.permissions,
+
+          createdAt:
+            new Date().toISOString(),
+        });
+      } catch (error) {
+        console.error(
+          'Auth refresh failed:',
+          error,
+        );
+
+        setUser(null);
+      } finally {
+        setLoading(false);
+      }
+    };
 
   useEffect(() => {
     refresh();
   }, []);
 
-  const login = async (
-    email: string,
-    password: string
-  ) => {
-    setLoading(true);
-    await authApi.login({
-      email,
-      password,
-    });
+  const login =
+    async (
+      email: string,
+      password: string,
+    ) => {
+      setLoading(true);
 
-    // Refresh to get user data with role
-    await refresh();
-  };
+      try {
+        await authApi.login({
+          email,
+          password,
+        });
 
-  const logout = async () => {
-    setLoading(true);
-    try {
-      await authApi.logout();
-    } catch (error) {
-      console.error('Logout failed:', error);
-    } finally {
-      setUser(null);
-      setLoading(false);
-    }
-  };
+        await refresh();
+      } finally {
+        setLoading(false);
+      }
+    };
+
+  const logout =
+    async () => {
+      setLoading(true);
+
+      try {
+        await authApi.logout();
+      } catch (error) {
+        console.error(
+          'Logout failed:',
+          error,
+        );
+      } finally {
+        setUser(null);
+        setLoading(false);
+      }
+    };
 
   return (
     <AuthContext.Provider
@@ -100,11 +137,12 @@ export function AuthProvider({
 }
 
 export function useAuth() {
-  const ctx = useContext(AuthContext);
+  const ctx =
+    useContext(AuthContext);
 
   if (!ctx) {
     throw new Error(
-      'useAuth must be used inside AuthProvider'
+      'useAuth must be used inside AuthProvider',
     );
   }
 

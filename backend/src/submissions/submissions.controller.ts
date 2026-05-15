@@ -4,6 +4,7 @@ import {
   Get,
   Param,
   ParseUUIDPipe,
+  Patch,
   Post,
   Req,
   UseGuards,
@@ -12,9 +13,12 @@ import type { Request } from 'express';
 
 import { SubmissionsService } from './submissions.service';
 import { CreateSubmissionDto } from './dto/create-submission.dto';
+import { UpdateSubmissionStatusDto } from './dto/update-submission-status.dto';
 
 import { JwtAuthGuard } from '../auth/jwt.guard';
 import { OptionalJwtGuard } from '../auth/optional-jwt.guard';
+import { PermissionsGuard } from '../auth/permissions.guard';
+import { Permissions } from '../auth/permissions.decorator';
 
 type AuthenticatedUser = {
   userId: string;
@@ -43,6 +47,15 @@ export class SubmissionsController {
     );
   }
 
+  @UseGuards(JwtAuthGuard, PermissionsGuard)
+  @Permissions('VIEW_SUBMISSIONS')
+  @Get()
+  findAll(@Req() req: Request) {
+    const user = req.user as AuthenticatedUser;
+
+    return this.submissionsService.findAll(user.userId);
+  }
+
   @UseGuards(JwtAuthGuard)
   @Get('mine')
   findMine(@Req() req: Request) {
@@ -62,6 +75,23 @@ export class SubmissionsController {
     return this.submissionsService.findOne(
       id,
       user.userId,
+    );
+  }
+
+  @UseGuards(JwtAuthGuard, PermissionsGuard)
+  @Permissions('VIEW_SUBMISSIONS')
+  @Patch(':id/status')
+  updateStatus(
+    @Param('id', new ParseUUIDPipe()) id: string,
+    @Body() dto: UpdateSubmissionStatusDto,
+    @Req() req: Request,
+  ) {
+    const user = req.user as AuthenticatedUser;
+
+    return this.submissionsService.updateStatus(
+      id,
+      user.userId,
+      dto,
     );
   }
 }

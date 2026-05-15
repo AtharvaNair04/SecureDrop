@@ -7,6 +7,7 @@ import {
 } from '@nestjs/common';
 import { createHash } from 'crypto';
 import * as fs from 'fs/promises';
+import * as path from 'path';
 
 import { PrismaService } from '../prisma/prisma.service';
 import { validateFileSignature } from './file-signature.validator';
@@ -94,5 +95,109 @@ export class AttachmentsService {
 
       throw new InternalServerErrorException('Attachment upload failed');
     }
+  }
+
+  async download(
+    attachmentId: string,
+    user: {
+      userId: string;
+      roles: string[];
+      permissions: string[];
+    },
+  ) {
+    const attachment =
+      await this.prisma.attachment.findUnique({
+        where: { id: attachmentId },
+      });
+
+    if (!attachment) {
+      throw new NotFoundException(
+        'Attachment not found',
+      );
+    }
+
+    const uploadsRoot = path.resolve(
+      'storage/uploads',
+    );
+
+    const resolvedPath = path.resolve(
+      attachment.storagePath,
+    );
+
+    if (!resolvedPath.startsWith(uploadsRoot)) {
+      throw new ForbiddenException(
+        'Invalid attachment path',
+      );
+    }
+
+    try {
+      await fs.access(resolvedPath);
+    } catch {
+      throw new NotFoundException(
+        'Attachment file missing',
+      );
+    }
+
+    await this.prisma.accessAuditLog.create({
+      data: {
+        userId: user.userId,
+        action: 'DOWNLOAD_ATTACHMENT',
+        resourceType: 'ATTACHMENT',
+        resourceId: attachment.id,
+      },
+    });
+
+    return {
+      ...attachment,
+      storagePath: resolvedPath,
+    };
+  }
+
+  async deleteAttachment(
+    submissionId: string,
+    attachmentId: string,
+    userId: string,
+  ) {
+    const attachment = await this.prisma.attachment.findFirst({
+      where: {
+        id: attachmentId,
+        submissionId,
+      },
+    });
+
+    if (!attachment) {
+      throw new NotFoundException('Attachment not found');
+    }
+
+    const uploadsRoot = path.resolve('storage/uploads');
+    const resolvedPath = path.resolve(attachment.storagePath);
+
+    if (!resolvedPath.startsWith(uploadsRoot)) {
+      throw new ForbiddenException('Invalid attachment path');
+    }
+
+    await this.prisma.$transaction(async (tx) => {
+      await tx.attachment.delete({
+        where: {
+          id: attachment.id,
+        },
+      });
+
+      await tx.accessAuditLog.create({
+        data: {
+          userId,
+          action: 'DELETE_ATTACHMENT',
+          resourceType: 'ATTACHMENT',
+          resourceId: attachment.id,
+        },
+      });
+    });
+
+    await fs.unlink(resolvedPath).catch(() => {});
+
+    return {
+      message: 'Attachment deleted successfully',
+      attachmentId: attachment.id,
+    };
   }
 }
