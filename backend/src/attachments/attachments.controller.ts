@@ -1,10 +1,13 @@
 import {
   BadRequestException,
   Controller,
+  Delete,
+  Get,
   Param,
   ParseUUIDPipe,
   Post,
   Req,
+  StreamableFile,
   UploadedFile,
   UseGuards,
   UseInterceptors,
@@ -14,8 +17,13 @@ import { FileInterceptor } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
 import { randomUUID } from 'crypto';
 import type { Request } from 'express';
+import { createReadStream } from 'fs';
+import * as path from 'path';
 
+import { Permissions } from '../auth/permissions.decorator';
+import { PermissionsGuard } from '../auth/permissions.guard';
 import { JwtAuthGuard } from '../auth/jwt.guard';
+
 import { AttachmentsService } from './attachments.service';
 
 const ALLOWED_MIME_TYPES = [
@@ -59,7 +67,6 @@ export class AttachmentsController {
         fileSize: 5 * 1024 * 1024,
       },
       fileFilter: (_, file, cb) => {
-        console.log('UPLOAD DEBUG:', { originalname: file.originalname, mimetype: file.mimetype, });
         if (!ALLOWED_MIME_TYPES.includes(file.mimetype)) {
           return cb(
             new BadRequestException('Invalid file type'),
@@ -86,6 +93,50 @@ export class AttachmentsController {
       submissionId,
       user.userId,
       file,
+    );
+  }
+
+  @UseGuards(JwtAuthGuard, PermissionsGuard)
+  @Permissions('VIEW_FILE')
+  @Get(':attachmentId/download')
+  async download(
+    @Param('attachmentId', new ParseUUIDPipe())
+    attachmentId: string,
+    @Req() req: Request,
+  ): Promise<StreamableFile> {
+    const user = req.user as AuthenticatedUser;
+
+    const attachment =
+      await this.attachmentsService.download(
+        attachmentId,
+        user,
+      );
+
+    const fileStream = createReadStream(
+      attachment.storagePath,
+    );
+
+    return new StreamableFile(fileStream, {
+      type: attachment.mimeType,
+      disposition: `attachment; filename="${attachment.originalName}"`,
+    });
+  }
+
+  @UseGuards(JwtAuthGuard, PermissionsGuard)
+  @Permissions('DELETE_FILE')
+  @Delete(':attachmentId')
+  deleteAttachment(
+    @Param('id', new ParseUUIDPipe()) submissionId: string,
+    @Param('attachmentId', new ParseUUIDPipe())
+    attachmentId: string,
+    @Req() req: Request,
+  ) {
+    const user = req.user as AuthenticatedUser;
+
+    return this.attachmentsService.deleteAttachment(
+      submissionId,
+      attachmentId,
+      user.userId,
     );
   }
 }
