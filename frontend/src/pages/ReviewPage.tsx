@@ -3,7 +3,7 @@ import { dropsApi, Drop, DropStatus } from '../api';
 import { statusBadge, timeAgo } from '../utils';
 import './ReviewPage.css';
 
-const STATUSES: DropStatus[] = ['PENDING', 'UNDER_REVIEW', 'RESOLVED', 'DISMISSED'];
+const STATUSES: DropStatus[] = ['PENDING', 'UNDER_REVIEW', 'RESOLVED', 'REJECTED'];
 
 export default function ReviewPage() {
   const [drops, setDrops] = useState<Drop[]>([]);
