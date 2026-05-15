@@ -1,0 +1,111 @@
+.submit-grid {
+  display: grid;
+  grid-template-columns: 1fr 280px;
+  gap: 20px;
+  align-items: start;
+}
+
+.submit-form {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.file-drop-zone {
+  border: 1px dashed var(--border2);
+  border-radius: var(--radius);
+  padding: 28px 20px;
+  text-align: center;
+  cursor: pointer;
+  color: var(--text2);
+  font-size: 14px;
+  transition: all var(--trans);
+  background: var(--bg3);
+}
+.file-drop-zone:hover, .file-drop-zone.has-file {
+  border-color: var(--accent);
+  background: rgba(0,229,160,0.03);
+}
+.file-icon {
+  font-size: 24px;
+  margin-bottom: 8px;
+  color: var(--accent);
+}
+.file-selected {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  justify-content: center;
+  flex-wrap: wrap;
+  color: var(--text);
+}
+
+.submit-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.submit-note {
+  font-size: 11px;
+  color: var(--text3);
+  text-align: center;
+  letter-spacing: 0.02em;
+}
+
+.tip-heading {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--white);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-family: var(--font-mono);
+  margin-bottom: 12px;
+}
+.tip-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.tip-list li {
+  font-size: 13px;
+  color: var(--text2);
+  padding-left: 16px;
+  position: relative;
+  line-height: 1.5;
+}
+.tip-list li::before {
+  content: '›';
+  position: absolute;
+  left: 0;
+  color: var(--accent);
+  font-weight: 700;
+}
+
+.submit-success {
+  text-align: center;
+  padding: 80px 20px;
+}
+.success-icon {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: var(--accent-dim);
+  border: 1px solid var(--accent);
+  color: var(--accent);
+  font-size: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 20px;
+}
+.submit-success h2 {
+  font-size: 22px;
+  color: var(--white);
+  font-weight: 800;
+  margin-bottom: 8px;
+}
+
+@media (max-width: 900px) {
+  .submit-grid { grid-template-columns: 1fr; }
+}
