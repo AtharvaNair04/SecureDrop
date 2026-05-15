@@ -1,25 +1,38 @@
-
-const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+const BASE_URL =
+  import.meta.env.VITE_API_URL ||
+  'http://localhost:3000';
 
 async function request<T>(
   path: string,
-  options: RequestInit = {}
+  options: RequestInit = {},
 ): Promise<T> {
-  const res = await fetch(`${BASE_URL}${path}`, {
-    credentials: 'include',
-    headers: {
-      'Content-Type': 'application/json',
-      ...options.headers,
+  const res = await fetch(
+    `${BASE_URL}${path}`,
+    {
+      credentials: 'include',
+
+      headers: {
+        'Content-Type':
+          'application/json',
+        ...options.headers,
+      },
+
+      ...options,
     },
-    ...options,
-  });
+  );
 
   if (!res.ok) {
     const err = await res
       .json()
-      .catch(() => ({ message: 'Request failed' }));
+      .catch(() => ({
+        message:
+          'Request failed',
+      }));
 
-    throw new Error(err.message || `HTTP ${res.status}`);
+    throw new Error(
+      err.message ||
+        `HTTP ${res.status}`,
+    );
   }
 
   if (res.status === 204) {
@@ -32,16 +45,33 @@ async function request<T>(
 // ─── Auth ─────────────────────────────────────────────────────────────────────
 
 export const authApi = {
-  register: (data: { email: string; password: string }) =>
-    request<User>('/auth/register', {
-      method: 'POST',
-      body: JSON.stringify(data),
-    }),
+  register: (data: {
+    email: string;
+    password: string;
+  }) =>
+    request<User>(
+      '/auth/register',
+      {
+        method: 'POST',
 
-  login: (data: { email: string; password: string }) =>
-    request('/auth/login', {
+        body: JSON.stringify(
+          data,
+        ),
+      },
+    ),
+
+  login: (data: {
+    email: string;
+    password: string;
+  }) =>
+    request<{
+      access_token: string;
+    }>('/auth/login', {
       method: 'POST',
-      body: JSON.stringify(data),
+
+      body: JSON.stringify(
+        data,
+      ),
     }),
 
   logout: () =>
@@ -50,76 +80,121 @@ export const authApi = {
     }),
 
   me: () =>
-    request<{ userId: string; email: string; roles: string[]; permissions: string[] }>('/auth/me'),
+    request<{
+      userId: string;
+      email: string;
+      roles: string[];
+      permissions: string[];
+    }>('/auth/me'),
 };
 
-// ─── Drops ────────────────────────────────────────────────────────────────────
+// ─── Submissions ──────────────────────────────────────────────────────────────
 
 export const dropsApi = {
-  submit: async (formData: FormData) => {
-    // Step 1: Create submission with title & description
-    const title = formData.get('title') as string;
-    const description = formData.get('description') as string;
-    const file = formData.get('file') as File | null;
+  submit: async (
+    formData: FormData,
+  ) => {
+    const title =
+      formData.get(
+        'title',
+      ) as string;
 
-    const createRes = await fetch(`${BASE_URL}/submissions`, {
-      method: 'POST',
-      credentials: 'include',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ title, description, isAnonymous: false }),
-    });
+    const description =
+      formData.get(
+        'description',
+      ) as string;
 
-    if (!createRes.ok) {
-      const err = await createRes
-        .json()
-        .catch(() => ({ message: 'Submission failed' }));
-      throw new Error(err.message);
-    }
+    const file =
+      formData.get(
+        'file',
+      ) as File | null;
 
-    const submission = await createRes.json();
+    // Step 1 — create submission
 
-    // Step 2: Upload file if provided
+    const submission =
+      await request<Drop>(
+        '/submissions',
+        {
+          method: 'POST',
+
+          body: JSON.stringify(
+            {
+              title,
+              description,
+              isAnonymous: false,
+            },
+          ),
+        },
+      );
+
+    // Step 2 — upload attachment
+
     if (file) {
-      const fileFormData = new FormData();
-      fileFormData.append('file', file);
+      const uploadData =
+        new FormData();
 
-      const uploadRes = await fetch(`${BASE_URL}/submissions/${submission.id}/attachments`, {
-        method: 'POST',
-        credentials: 'include',
-        body: fileFormData,
-      });
+      uploadData.append(
+        'file',
+        file,
+      );
+
+      const uploadRes =
+        await fetch(
+          `${BASE_URL}/submissions/${submission.id}/attachments`,
+          {
+            method: 'POST',
+
+            credentials:
+              'include',
+
+            body: uploadData,
+          },
+        );
 
       if (!uploadRes.ok) {
-        const err = await uploadRes
-          .json()
-          .catch(() => ({ message: 'File upload failed' }));
-        throw new Error(err.message);
+        const err =
+          await uploadRes
+            .json()
+            .catch(() => ({
+              message:
+                'Attachment upload failed',
+            }));
+
+        throw new Error(
+          err.message,
+        );
       }
     }
 
-    return submission;
+    // reload updated submission with attachments
+
+    return request<Drop>(
+      `/submissions/${submission.id}`,
+    );
   },
 
   listMine: () =>
-    request<Drop[]>('/submissions/mine'),
+    request<Drop[]>(
+      '/submissions/mine',
+    ),
 
   listAll: () =>
-    request<Drop[]>('/submissions'),
+    request<Drop[]>(
+      '/submissions',
+    ),
 
   getOne: (id: string) =>
-    request<Drop>(`/submissions/${id}`),
-
-  updateStatus: (id: string, status: DropStatus) =>
-    // Note: updateStatus endpoint not available in backend
-    Promise.reject(new Error('Status update not available')),
-
-  delete: (id: string) =>
-    request(`/submissions/${id}`, {
-      method: 'DELETE',
-    }),
+    request<Drop>(
+      `/submissions/${id}`,
+    ),
 };
 
 // ─── Types ────────────────────────────────────────────────────────────────────
+
+export type UserRole =
+  | 'USER'
+  | 'MODERATOR'
+  | 'ADMIN';
 
 export type DropStatus =
   | 'PENDING'
@@ -129,20 +204,49 @@ export type DropStatus =
 
 export interface User {
   id: string;
+
   email: string;
-  role?: string;
+
+  role?: UserRole;
+
+  roles?: string[];
+
+  permissions?: string[];
+
+  createdAt: string;
+}
+
+export interface Attachment {
+  id: string;
+
+  originalName: string;
+
+  mimeType: string;
+
+  fileSize: number;
+
   createdAt: string;
 }
 
 export interface Drop {
   id: string;
-  title: string;
+
+  title?: string;
+
   description: string;
-  fileUrl?: string;
-  fileName?: string;
-  fileSize?: number;
+
+  isAnonymous: boolean;
+
   status: DropStatus;
+
   createdAt: string;
+
   updatedAt: string;
-  userId?: string;
+
+  author?: {
+    id: string;
+    email: string;
+  } | null;
+
+  attachments: Attachment[];
 }
