@@ -53,6 +53,7 @@ export const authApi = {
       '/auth/register',
       {
         method: 'POST',
+
         body: JSON.stringify(
           data,
         ),
@@ -67,6 +68,7 @@ export const authApi = {
       access_token: string;
     }>('/auth/login', {
       method: 'POST',
+
       body: JSON.stringify(
         data,
       ),
@@ -185,29 +187,13 @@ export const dropsApi = {
     request<Drop>(
       `/submissions/${id}`,
     ),
-
-  updateStatus: (
-    id: string,
-    status: DropStatus,
-  ) =>
-    request<Drop>(
-      `/submissions/${id}/status`,
-      {
-        method: 'PATCH',
-
-        body: JSON.stringify(
-          {
-            status,
-          },
-        ),
-      },
-    ),
 };
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 export type UserRole =
   | 'USER'
+  | 'MODERATOR'
   | 'ADMIN';
 
 export type DropStatus =
