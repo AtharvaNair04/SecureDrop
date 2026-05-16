@@ -105,12 +105,7 @@ export default function App() {
             }
           >
             <Route
-              path="/review"
-              element={<ReviewPage />}
-            />
-
-            <Route
-              path="/admin/users"
+              path="/admin"
               element={
                 <AdminUsersPage />
               }

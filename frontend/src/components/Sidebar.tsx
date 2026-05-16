@@ -21,31 +21,20 @@ const NAV_USER = [
   },
 
   {
-    to: '/drops',
-    icon: '◆',
-    label: 'All Drops',
-  },
-
-  {
     to: '/my-drops',
     icon: '◈',
     label: 'My Drops',
   },
 ];
 
-const NAV_ADMIN = [
+const NAV_MODERATOR = [
   {
-    to: '/review',
+    to: '/admin',
     icon: '◉',
-    label: 'Review Queue',
-  },
-
-  {
-    to: '/admin/users',
-    icon: '⬥',
-    label: 'Users',
+    label: 'Admin Overview',
   },
 ];
+
 
 export default function Sidebar() {
   const { user, logout } =
@@ -61,8 +50,15 @@ export default function Sidebar() {
       navigate('/login');
     };
 
+  const isModerator =
+    user?.role ===
+      'MODERATOR' ||
+    user?.role ===
+      'ADMIN';
+
   const isAdmin =
-    user?.role === 'ADMIN';
+    user?.role ===
+    'ADMIN';
 
   return (
     <aside className="sidebar">
@@ -117,7 +113,7 @@ export default function Sidebar() {
           ),
         )}
 
-        {isAdmin && (
+        {isModerator && (
           <>
             <div
               className="sidebar-section-label"
@@ -129,7 +125,7 @@ export default function Sidebar() {
               Moderation
             </div>
 
-            {NAV_ADMIN.map(
+            {NAV_MODERATOR.map(
               ({
                 to,
                 icon,
@@ -160,6 +156,7 @@ export default function Sidebar() {
             )}
           </>
         )}
+
       </nav>
 
       <div className="sidebar-footer">

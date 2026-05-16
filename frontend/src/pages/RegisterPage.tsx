@@ -1,11 +1,13 @@
 
-import { useState, FormEvent } from 'react';
+import { useState, FormEvent, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { authApi } from '../api';
+import { useAuth } from '../context/AuthContext';
 import './Auth.css';
 
 export default function RegisterPage() {
   const navigate = useNavigate();
+  const { user, loading } = useAuth();
 
   const [form, setForm] = useState({
     email: '',
@@ -14,7 +16,25 @@ export default function RegisterPage() {
   });
 
   const [error, setError] = useState('');
-  const [loading, setLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+
+  // Redirect to dashboard if already logged in
+  useEffect(() => {
+    if (!loading && user) {
+      navigate('/dashboard', { replace: true });
+    }
+  }, [user, loading, navigate]);
+
+  if (loading) {
+    return (
+      <div className="loading-screen">
+        <div className="spinner" />
+        <span className="mono" style={{ color: 'var(--text3)', fontSize: 13 }}>
+          Authenticating…
+        </span>
+      </div>
+    );
+  }
 
   const set =
     (k: string) => (e: React.ChangeEvent<HTMLInputElement>) =>
@@ -35,7 +55,7 @@ export default function RegisterPage() {
       return;
     }
 
-    setLoading(true);
+    setIsLoading(true);
 
     try {
       await authApi.register({
@@ -47,7 +67,7 @@ export default function RegisterPage() {
     } catch (err: any) {
       setError(err.message || 'Registration failed');
     } finally {
-      setLoading(false);
+      setIsLoading(false);
     }
   };
 
@@ -112,10 +132,10 @@ export default function RegisterPage() {
           <button
             type="submit"
             className="btn btn-primary"
-            disabled={loading}
+            disabled={isLoading}
             style={{ width: '100%', justifyContent: 'center' }}
           >
-            {loading ? (
+            {isLoading ? (
               <>
                 <span className="spinner" />
                 Creating account…

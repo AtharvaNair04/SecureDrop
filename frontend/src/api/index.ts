@@ -187,6 +187,21 @@ export const dropsApi = {
     request<Drop>(
       `/submissions/${id}`,
     ),
+
+  updateStatus: (
+    id: string,
+    status: DropStatus,
+  ) =>
+    request<Drop>(
+      `/submissions/${id}/status`,
+      {
+        method: 'PATCH',
+
+        body: JSON.stringify({
+          status,
+        }),
+      },
+    ),
 };
 
 // ─── Types ────────────────────────────────────────────────────────────────────

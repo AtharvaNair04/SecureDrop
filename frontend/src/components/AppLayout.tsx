@@ -59,7 +59,8 @@ export default function AppLayout({
     number
   > = {
     USER: 1,
-    ADMIN: 2,
+    MODERATOR: 2,
+    ADMIN: 3,
   };
 
   if (
