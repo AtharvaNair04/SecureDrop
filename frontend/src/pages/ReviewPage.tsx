@@ -43,6 +43,12 @@ export default function ReviewPage() {
       null,
     );
 
+  const [updating, setUpdating] =
+    useState<string | null>(null);
+
+  const [updateError, setUpdateError] =
+    useState('');
+
   const load = () => {
     setLoading(true);
 
@@ -59,8 +65,37 @@ export default function ReviewPage() {
 
   useEffect(load, []);
 
-  // backend currently has NO updateStatus endpoint
-  // keep UI but disable actions safely
+  const handleStatusUpdate = async (
+    dropId: string,
+    newStatus: DropStatus,
+  ) => {
+    try {
+      setUpdating(dropId);
+      setUpdateError('');
+
+      const updated =
+        await dropsApi.updateStatus(
+          dropId,
+          newStatus,
+        );
+
+      setDrops((prev) =>
+        prev.map((d) =>
+          d.id === dropId
+            ? updated
+            : d,
+        ),
+      );
+    } catch (err) {
+      setUpdateError(
+        err instanceof Error
+          ? err.message
+          : 'Failed to update status',
+      );
+    } finally {
+      setUpdating(null);
+    }
+  };
 
   const visible =
     filter === 'ALL'
@@ -274,21 +309,83 @@ export default function ReviewPage() {
                   )}
 
                   <div className="review-actions">
-                    <span
+                    <div
                       style={{
-                        fontSize: 12,
-                        color:
-                          'var(--text2)',
-                        fontFamily:
-                          'var(--font-mono)',
+                        display: 'flex',
+                        gap: 6,
+                        flexWrap: 'wrap',
                       }}
                     >
-                      Status updates
-                      not yet
-                      supported by
-                      backend
-                    </span>
+                      {STATUSES.map(
+                        (status) => (
+                          <button
+                            key={status}
+                            onClick={() =>
+                              handleStatusUpdate(
+                                drop.id,
+                                status,
+                              )
+                            }
+                            disabled={
+                              updating ===
+                                drop.id ||
+                              drop.status ===
+                                status
+                            }
+                            style={{
+                              padding:
+                                '4px 10px',
+                              fontSize: 12,
+                              backgroundColor:
+                                drop.status ===
+                                status
+                                  ? 'var(--accent)'
+                                  : 'var(--bg2)',
+                              color:
+                                drop.status ===
+                                status
+                                  ? 'white'
+                                  : 'var(--text2)',
+                              border:
+                                '1px solid var(--border)',
+                              borderRadius: 3,
+                              cursor:
+                                updating ===
+                                  drop.id
+                                  ? 'wait'
+                                  : 'pointer',
+                              opacity:
+                                updating ===
+                                  drop.id
+                                  ? 0.6
+                                  : 1,
+                            }}
+                          >
+                            {updating ===
+                            drop.id
+                              ? '...'
+                              : status.replace(
+                                  '_',
+                                  ' ',
+                                )}
+                          </button>
+                        ),
+                      )}
+                    </div>
                   </div>
+
+                  {updateError && (
+                    <p
+                      style={{
+                        color:
+                          'var(--error)',
+                        fontSize: 12,
+                        marginTop: 8,
+                      }}
+                    >
+                      {updateError}
+                    </p>
+                  )}
                 </div>
               )}
             </div>

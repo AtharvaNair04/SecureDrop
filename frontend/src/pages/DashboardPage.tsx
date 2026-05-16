@@ -33,9 +33,15 @@ export default function DashboardPage() {
   const [error, setError] =
     useState('');
 
+  const isAdmin =
+    user?.role === 'ADMIN';
+
   useEffect(() => {
-    dropsApi
-      .listMine()
+    const loadDrops = isAdmin
+      ? dropsApi.listAll()
+      : dropsApi.listMine();
+
+    loadDrops
       .then(setDrops)
       .catch((e) =>
         setError(e.message),
@@ -43,7 +49,7 @@ export default function DashboardPage() {
       .finally(() =>
         setLoading(false),
       );
-  }, []);
+  }, [isAdmin]);
 
   const stats: Record<
     DropStatus,
@@ -178,12 +184,14 @@ export default function DashboardPage() {
           Recent activity
         </h2>
 
-        <Link
-          to="/submit"
-          className="btn btn-primary btn-sm"
-        >
-          + New drop
-        </Link>
+        {!isAdmin && (
+          <Link
+            to="/submit"
+            className="btn btn-primary btn-sm"
+          >
+            + New drop
+          </Link>
+        )}
       </div>
 
       {loading && (
@@ -217,11 +225,9 @@ export default function DashboardPage() {
             </div>
 
             <p>
-              No drops yet.{' '}
-              <Link to="/submit">
-                Submit your
-                first one.
-              </Link>
+              {isAdmin
+                ? 'No submissions yet.'
+                : 'No drops yet. Submit your first one.'}
             </p>
           </div>
         )}
@@ -232,8 +238,7 @@ export default function DashboardPage() {
             {drops
               .slice(0, 8)
               .map((drop) => (
-                <Link
-                  to={`/my-drops/${drop.id}`}
+                <div
                   key={drop.id}
                   className="drop-row"
                 >
@@ -242,6 +247,25 @@ export default function DashboardPage() {
                       {drop.title ||
                         'Untitled'}
                     </span>
+
+                    {drop.author &&
+                      isAdmin && (
+                      <span
+                        style={{
+                          fontSize: 12,
+                          color:
+                            'var(--text3)',
+                        }}
+                      >
+                        by{' '}
+                        <strong>
+                          {
+                            drop.author
+                              .email
+                          }
+                        </strong>
+                      </span>
+                    )}
 
                     {drop
                       .attachments
@@ -274,7 +298,7 @@ export default function DashboardPage() {
                       )}
                     </span>
                   </div>
-                </Link>
+                </div>
               ))}
           </div>
         )}

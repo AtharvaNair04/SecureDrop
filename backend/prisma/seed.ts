@@ -30,6 +30,11 @@ async function main() {
       update: {},
       create: { name: 'VIEW_SUBMISSIONS' },
     }),
+    prisma.permission.upsert({
+      where: { name: 'UPDATE_SUBMISSION_STATUS' },
+      update: {},
+      create: { name: 'UPDATE_SUBMISSION_STATUS' },
+    }),
   ]);
 
   /*

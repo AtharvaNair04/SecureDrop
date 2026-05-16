@@ -79,7 +79,7 @@ export class SubmissionsController {
   }
 
   @UseGuards(JwtAuthGuard, PermissionsGuard)
-  @Permissions('VIEW_SUBMISSIONS')
+  @Permissions('UPDATE_SUBMISSION_STATUS')
   @Patch(':id/status')
   updateStatus(
     @Param('id', new ParseUUIDPipe()) id: string,
