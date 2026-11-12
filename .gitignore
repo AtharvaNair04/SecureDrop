@@ -16,3 +16,9 @@ build
 
 # Docker
 postgres_data
+
+# TLS certs / keys
+secrets/
+*.key
+*.pem
+*.cert
